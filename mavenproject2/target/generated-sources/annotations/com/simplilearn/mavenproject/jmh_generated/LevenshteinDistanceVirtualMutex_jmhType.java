@@ -1,0 +1,4 @@
+package com.simplilearn.mavenproject.jmh_generated;
+public class LevenshteinDistanceVirtualMutex_jmhType extends LevenshteinDistanceVirtualMutex_jmhType_B3 {
+}
+

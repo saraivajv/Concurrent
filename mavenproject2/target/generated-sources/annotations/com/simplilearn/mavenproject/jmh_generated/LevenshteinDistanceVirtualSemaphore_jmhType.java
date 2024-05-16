@@ -1,0 +1,4 @@
+package com.simplilearn.mavenproject.jmh_generated;
+public class LevenshteinDistanceVirtualSemaphore_jmhType extends LevenshteinDistanceVirtualSemaphore_jmhType_B3 {
+}
+

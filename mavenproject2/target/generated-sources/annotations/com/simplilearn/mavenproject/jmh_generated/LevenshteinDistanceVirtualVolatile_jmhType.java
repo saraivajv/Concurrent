@@ -1,0 +1,4 @@
+package com.simplilearn.mavenproject.jmh_generated;
+public class LevenshteinDistanceVirtualVolatile_jmhType extends LevenshteinDistanceVirtualVolatile_jmhType_B3 {
+}
+

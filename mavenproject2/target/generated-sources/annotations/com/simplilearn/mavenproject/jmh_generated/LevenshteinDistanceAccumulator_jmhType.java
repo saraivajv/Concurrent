@@ -1,0 +1,4 @@
+package com.simplilearn.mavenproject.jmh_generated;
+public class LevenshteinDistanceAccumulator_jmhType extends LevenshteinDistanceAccumulator_jmhType_B3 {
+}
+
