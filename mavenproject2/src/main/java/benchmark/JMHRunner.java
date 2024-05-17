@@ -16,6 +16,7 @@ import com.simplilearn.mavenproject.LevenshteinDistancePlatformVolatile;
 import com.simplilearn.mavenproject.LevenshteinDistanceAccumulator;
 import com.simplilearn.mavenproject.LevenshteinDistanceAdder;
 import com.simplilearn.mavenproject.LevenshteinDistanceAtomic;
+import com.simplilearn.mavenproject.LevenshteinDistanceForkjoin;
 import com.simplilearn.mavenproject.LevenshteinDistancePlatformMutex;
 import com.simplilearn.mavenproject.LevenshteinDistanceSerial;
 import com.simplilearn.mavenproject.LevenshteinDistanceVirtualMutex;
@@ -30,11 +31,12 @@ public class JMHRunner extends AbstractJavaSamplerClient{
 //        		.include(LevenshteinDistancePlatformSemaphore.class.getSimpleName())
 //        		.include(LevenshteinDistanceVirtualMutex.class.getSimpleName())
 //        		.include(LevenshteinDistanceVirtualSemaphore.class.getSimpleName())
-//        		.include(LevenshteinDistancePlatformVolatile.class.getSimpleName())
-        		.include(LevenshteinDistanceVirtualVolatile.class.getSimpleName())
+        		.include(LevenshteinDistancePlatformVolatile.class.getSimpleName())
+//        		.include(LevenshteinDistanceVirtualVolatile.class.getSimpleName())
 //        		.include(LevenshteinDistanceAccumulator.class.getSimpleName())
 //        		.include(LevenshteinDistanceAdder.class.getSimpleName())
 //        		.include(LevenshteinDistanceAtomic.class.getSimpleName())
+//        		.include(LevenshteinDistanceForkjoin.class.getSimpleName())
                 .warmupIterations(1)
                 .shouldDoGC(true)
                 .measurementIterations(3).forks(1)

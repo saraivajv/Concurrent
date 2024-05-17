@@ -1,9 +1,13 @@
 package com.simplilearn.mavenproject;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -21,7 +25,8 @@ import model.DataSet;
 
 @State(Scope.Benchmark)
 public class LevenshteinDistancePlatformMutex {
-    private static int simWords = 0;
+    private static ThreadLocal<Integer> threadLocalCounter = ThreadLocal.withInitial(() -> 0);
+    private static int totalSimWords = 0;
     private static final Lock lock = new ReentrantLock(); // Mutex
     private static final String DATASET_PATH = "C:\\Users\\joaov\\git\\bestmatching\\mavenproject\\src\\main\\java\\com\\simplilearn\\mavenproject\\textao.txt";
     private static final String REFERENCE_WORD = "tour";
@@ -42,19 +47,40 @@ public class LevenshteinDistancePlatformMutex {
     public void calculateLevenshteinDistanceBenchmark(Blackhole blackhole) {
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
         List<List<String>> chunks = chunkList(DATASET.getTextWords(), THREAD_POOL_SIZE);
+        List<Future<Integer>> futures = new ArrayList<>();
+
         for (List<String> chunk : chunks) {
-            executor.execute(() -> processChunk(chunk, blackhole));
+            Callable<Integer> task = () -> processChunk(chunk, blackhole);
+            futures.add(executor.submit(task));
         }
+
         executor.shutdown();
         try {
             executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        System.out.println("Quantidade de palavras parecidas encontradas: " + simWords);
+
+        // Collect the results
+        for (Future<Integer> future : futures) {
+            try {
+                int localCount = future.get();
+                lock.lock();
+                try {
+                    totalSimWords += localCount;
+                } finally {
+                    lock.unlock();
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+
+        System.out.println("Quantidade de palavras parecidas encontradas: " + totalSimWords);
     }
 
-    private void processChunk(List<String> chunk, Blackhole blackhole) {
+    private Integer processChunk(List<String> chunk, Blackhole blackhole) {
+        threadLocalCounter.set(0); // Reset thread-local counter for this task
         for (String word : chunk) {
             int distance = calculateLevenshteinDistance(REFERENCE_WORD, word.toLowerCase());
             blackhole.consume(distance);
@@ -62,15 +88,11 @@ public class LevenshteinDistancePlatformMutex {
                 incrementSimWords();
             }
         }
+        return threadLocalCounter.get();
     }
 
     private void incrementSimWords() {
-        lock.lock();
-        try {
-            simWords++;
-        } finally {
-            lock.unlock();
-        }
+        threadLocalCounter.set(threadLocalCounter.get() + 1);
     }
 
     private List<List<String>> chunkList(List<String> list, int numChunks) {

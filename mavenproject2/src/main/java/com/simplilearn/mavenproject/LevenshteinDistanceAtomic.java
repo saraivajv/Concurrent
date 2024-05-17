@@ -22,6 +22,9 @@ import model.DataSet;
 @State(Scope.Benchmark)
 public class LevenshteinDistanceAtomic {
     private static final AtomicInteger simWords = new AtomicInteger(0); // AtomicInteger for thread-safe operations
+    private static ThreadLocal<Integer> threadLocalCounter = ThreadLocal.withInitial(() -> 0);
+    private static int contadorPalavras = 0;
+    
     private static final String DATASET_PATH = "C:\\Users\\joaov\\git\\bestmatching\\mavenproject\\src\\main\\java\\com\\simplilearn\\mavenproject\\textao.txt";
     private static final String REFERENCE_WORD = "tour";
     private static final int MAX_DISTANCE = 3;
@@ -44,13 +47,13 @@ public class LevenshteinDistanceAtomic {
         for (List<String> chunk : chunks) {
             executor.execute(() -> processChunk(chunk, blackhole));
         }
+        System.out.println("Quantidade de palavras parecidas encontradas: " + contadorPalavras);
         executor.shutdown();
         try {
             executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        System.out.println("Quantidade de palavras parecidas encontradas: " + simWords.get());
     }
 
     private void processChunk(List<String> chunk, Blackhole blackhole) {
@@ -61,10 +64,11 @@ public class LevenshteinDistanceAtomic {
                 incrementSimWords();
             }
         }
+        contadorPalavras = threadLocalCounter.get();
     }
 
     private void incrementSimWords() {
-        simWords.incrementAndGet();
+        threadLocalCounter.set(simWords.incrementAndGet());
     }
 
     private List<List<String>> chunkList(List<String> list, int numChunks) {

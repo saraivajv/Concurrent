@@ -30,6 +30,8 @@ public class LevenshteinDistanceAdder{
     
     private static final DataSet DATASET = new DataSet();
     private static final LongAdder adder = new LongAdder(); // AtomicInteger for thread-safe operations
+    private static ThreadLocal<Long> threadLocalCounter = ThreadLocal.withInitial(() -> 0L);
+    private static Long contadorPalavras = 0L;
     
     @Setup
     public static final void setup() throws IOException {
@@ -46,13 +48,13 @@ public class LevenshteinDistanceAdder{
         for (List<String> chunk : chunks) {
             executor.execute(() -> processChunk(chunk, blackhole));
         }
+        System.out.println("Quantidade de palavras parecidas encontradas: " + contadorPalavras);
         executor.shutdown();
         try {
             executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        System.out.println("Quantidade de palavras parecidas encontradas: " + adder.sum());
     }
 
     private void processChunk(List<String> chunk, Blackhole blackhole) {
@@ -61,8 +63,10 @@ public class LevenshteinDistanceAdder{
             blackhole.consume(distance);
             if (distance <= MAX_DISTANCE) {
                 adder.increment();
+                threadLocalCounter.set(adder.sum());
             }
         }
+        contadorPalavras = threadLocalCounter.get();
     }
 
     private List<List<String>> chunkList(List<String> list, int numChunks) {
