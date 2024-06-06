@@ -3,12 +3,9 @@ package com.simplilearn.mavenproject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.LongAccumulator;
-import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Collectors;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -22,20 +19,18 @@ import org.openjdk.jmh.infra.Blackhole;
 import model.DataSet;
 
 @State(Scope.Benchmark)
-public class LevenshteinDistanceAdder{
-	private static final String DATASET_PATH = "C:\\Users\\joaov\\git\\textao.txt";
+public class LevenshteinDistanceParallelStreams {
+    private static final AtomicInteger totalSimWords = new AtomicInteger(0);
+    private static final String DATASET_PATH = "C:\\Users\\joaov\\git\\textao.txt";
     private static final String REFERENCE_WORD = "tour";
     private static final int MAX_DISTANCE = 3;
-    private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors(); // Number of available processors
-    
+    private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors();
+
     private static final DataSet DATASET = new DataSet();
-    private static final LongAdder adder = new LongAdder(); // AtomicInteger for thread-safe operations
-    private static ThreadLocal<Long> threadLocalCounter = ThreadLocal.withInitial(() -> 0L);
-    private static Long contadorPalavras = 0L;
-    
+
     @Setup
     public static final void setup() throws IOException {
-        System.out.println("Entering setup");
+        System.out.println("entrei no setup");
         DATASET.read(DATASET_PATH);
     }
 
@@ -43,30 +38,29 @@ public class LevenshteinDistanceAdder{
     @BenchmarkMode(Mode.Throughput)
     @OutputTimeUnit(TimeUnit.SECONDS)
     public void calculateLevenshteinDistanceBenchmark(Blackhole blackhole) {
-        ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
-        List<List<String>> chunks = chunkList(DATASET.getTextWords(), THREAD_POOL_SIZE);
-        for (List<String> chunk : chunks) {
-            executor.execute(() -> processChunk(chunk, blackhole));
-        }
-        System.out.println("Quantidade de palavras parecidas encontradas: " + contadorPalavras);
-        executor.shutdown();
-        try {
-            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        List<String> words = DATASET.getTextWords();
+        List<List<String>> chunks = chunkList(words, THREAD_POOL_SIZE);
+
+        // Process chunks in parallel and sum the results
+        int total = chunks.parallelStream()
+            .mapToInt(chunk -> processChunk(chunk, blackhole))
+            .sum();
+
+        totalSimWords.addAndGet(total);
+
+        System.out.println("Quantidade de palavras parecidas encontradas: " + totalSimWords.get());
     }
 
-    private void processChunk(List<String> chunk, Blackhole blackhole) {
-        for (String word : chunk) {
+    private int processChunk(List<String> chunk, Blackhole blackhole) {
+        AtomicInteger localCounter = new AtomicInteger(0);
+        chunk.forEach(word -> {
             int distance = calculateLevenshteinDistance(REFERENCE_WORD, word.toLowerCase());
             blackhole.consume(distance);
             if (distance <= MAX_DISTANCE) {
-                adder.increment();
-                threadLocalCounter.set(adder.sum());
+                localCounter.incrementAndGet();
             }
-        }
-        contadorPalavras = threadLocalCounter.get();
+        });
+        return localCounter.get();
     }
 
     private List<List<String>> chunkList(List<String> list, int numChunks) {

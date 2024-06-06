@@ -22,7 +22,7 @@ import model.DataSet;
 
 @State(Scope.Benchmark)
 public class LevenshteinDistanceAccumulator{
-    private static final String DATASET_PATH = "C:\\Users\\joaov\\git\\bestmatching\\mavenproject\\src\\main\\java\\com\\simplilearn\\mavenproject\\textao.txt";
+	private static final String DATASET_PATH = "C:\\Users\\joaov\\git\\textao.txt";
     private static final String REFERENCE_WORD = "tour";
     private static final int MAX_DISTANCE = 3;
     private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors(); // Number of available processors
@@ -47,7 +47,7 @@ public class LevenshteinDistanceAccumulator{
         for (List<String> chunk : chunks) {
             executor.execute(() -> processChunk(chunk, blackhole));
         }
-        System.out.println("Quantidade de palavras parecidas encontradas: " + accumulator.get());
+        System.out.println("Quantidade de palavras parecidas encontradas: " + contadorPalavras);
         executor.shutdown();
         try {
             executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
@@ -57,13 +57,11 @@ public class LevenshteinDistanceAccumulator{
     }
 
     private void processChunk(List<String> chunk, Blackhole blackhole) {
-    	int i = 0;
         for (String word : chunk) {
-        	i++;
             int distance = calculateLevenshteinDistance(REFERENCE_WORD, word.toLowerCase());
             blackhole.consume(distance);
             if (distance <= MAX_DISTANCE) {
-                accumulator.accumulate(i);
+            	accumulator.accumulate(1);
                 threadLocalCounter.set(accumulator.get());
             }
         }

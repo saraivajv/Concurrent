@@ -32,7 +32,7 @@ public class LevenshteinDistanceSerial{
         int maxDistance = 3; // Distância máxima permitida
         
         try {
-        	WordReader wordReader = new WordReader("C:\\Users\\joaov\\git\\bestmatching\\mavenproject\\src\\main\\java\\com\\simplilearn\\mavenproject\\textao.txt");
+        	WordReader wordReader = new WordReader("C:\\Users\\joaov\\git\\textao.txt");
             while (wordReader.hasNextLine()) {
                 String line = wordReader.getNextLine();
                 String words[] = line.split("\\s+");

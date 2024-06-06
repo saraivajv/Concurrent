@@ -3,12 +3,16 @@ package com.simplilearn.mavenproject;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.LongAccumulator;
-import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+import jdk.incubator.concurrent.ScopedValue;
 
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -22,20 +26,20 @@ import org.openjdk.jmh.infra.Blackhole;
 import model.DataSet;
 
 @State(Scope.Benchmark)
-public class LevenshteinDistanceAdder{
-	private static final String DATASET_PATH = "C:\\Users\\joaov\\git\\textao.txt";
+public class LevenshteinDistanceScopedValue {
+    private static final ScopedValue<Integer> scopedCounter = ScopedValue.newInstance();
+    private static int totalSimWords = 0;
+    private static final Lock lock = new ReentrantLock();
+    private static final String DATASET_PATH = "C:\\Users\\joaov\\git\\textao.txt";
     private static final String REFERENCE_WORD = "tour";
     private static final int MAX_DISTANCE = 3;
-    private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors(); // Number of available processors
-    
+    private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors();
+
     private static final DataSet DATASET = new DataSet();
-    private static final LongAdder adder = new LongAdder(); // AtomicInteger for thread-safe operations
-    private static ThreadLocal<Long> threadLocalCounter = ThreadLocal.withInitial(() -> 0L);
-    private static Long contadorPalavras = 0L;
-    
+
     @Setup
     public static final void setup() throws IOException {
-        System.out.println("Entering setup");
+        System.out.println("Entrando no setup");
         DATASET.read(DATASET_PATH);
     }
 
@@ -43,30 +47,54 @@ public class LevenshteinDistanceAdder{
     @BenchmarkMode(Mode.Throughput)
     @OutputTimeUnit(TimeUnit.SECONDS)
     public void calculateLevenshteinDistanceBenchmark(Blackhole blackhole) {
-        ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+        ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
         List<List<String>> chunks = chunkList(DATASET.getTextWords(), THREAD_POOL_SIZE);
+        List<Future<Integer>> futures = new ArrayList<>();
+
         for (List<String> chunk : chunks) {
-            executor.execute(() -> processChunk(chunk, blackhole));
+            Callable<Integer> task = () -> processChunk(chunk, blackhole);
+            futures.add(executor.submit(task));
         }
-        System.out.println("Quantidade de palavras parecidas encontradas: " + contadorPalavras);
+
         executor.shutdown();
         try {
             executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-    }
 
-    private void processChunk(List<String> chunk, Blackhole blackhole) {
-        for (String word : chunk) {
-            int distance = calculateLevenshteinDistance(REFERENCE_WORD, word.toLowerCase());
-            blackhole.consume(distance);
-            if (distance <= MAX_DISTANCE) {
-                adder.increment();
-                threadLocalCounter.set(adder.sum());
+        for (Future<Integer> future : futures) {
+            try {
+                int localCount = future.get();
+                lock.lock();
+                try {
+                    totalSimWords += localCount;
+                } finally {
+                    lock.unlock();
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
             }
         }
-        contadorPalavras = threadLocalCounter.get();
+
+        System.out.println("Quantidade de palavras parecidas encontradas: " + totalSimWords);
+    }
+
+    private Integer processChunk(List<String> chunk, Blackhole blackhole) {
+        ScopedValue.where(scopedCounter, totalSimWords).run(() -> {
+            for (String word : chunk) {
+                int distance = calculateLevenshteinDistance(REFERENCE_WORD, word.toLowerCase());
+                blackhole.consume(distance);
+                if (distance <= MAX_DISTANCE) {
+                    incrementSimWords();
+                }
+            }
+        });
+        return scopedCounter.get();
+    }
+
+    private void incrementSimWords() {
+    	totalSimWords++;
     }
 
     private List<List<String>> chunkList(List<String> list, int numChunks) {

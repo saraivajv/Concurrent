@@ -28,7 +28,7 @@ public class LevenshteinDistanceVirtualMutex {
     private static ThreadLocal<Integer> threadLocalCounter = ThreadLocal.withInitial(() -> 0);
     private static int totalSimWords = 0;
     private static final Lock lock = new ReentrantLock(); // Mutex
-    private static final String DATASET_PATH = "C:\\Users\\joaov\\git\\bestmatching\\mavenproject\\src\\main\\java\\com\\simplilearn\\mavenproject\\textao.txt";
+    private static final String DATASET_PATH = "C:\\Users\\joaov\\git\\textao.txt";
     private static final String REFERENCE_WORD = "tour";
     private static final int MAX_DISTANCE = 3;
     private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors(); // Number of available processors
