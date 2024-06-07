@@ -15,10 +15,6 @@ import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.RunnerException;
-import com.simplilearn.mavenproject.WordReader;
-//import org.apache.jmeter.protocol.java.sampler.AbstractJavaSamplerClient;
-//import org.apache.jmeter.protocol.java.sampler.JavaSamplerContext;
-//import org.apache.jmeter.samplers.SampleResult;
 
 public class LevenshteinDistanceSerial{
 	private static int simWords = 0;
